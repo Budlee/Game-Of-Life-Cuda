@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
     glutInitWindowPosition(200, 0);
     glutInitWindowSize(X_AXIS, Y_AXIS);
-    glutCreateWindow("-----The Game of Life Idle-----");
+    glutCreateWindow("-----The Game of Life -----");
     
     
     glViewport(0, 0, X_AXIS, Y_AXIS);
@@ -94,6 +94,7 @@ int main(int argc, char** argv)
     
     
     glutDisplayFunc(drawLines);
+    //Can use either timer of idle to call update
     glutTimerFunc(INTERVAL, update,0);
     //glutIdleFunc(idleUpdate);
     
