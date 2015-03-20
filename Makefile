@@ -9,11 +9,11 @@ all: $(PROJECTNAME)
 GameOfLife: main.o GameLogic.o
 	$(CC) -o $(PROJECTNAME) main.o GameLogic.o $(LDFLAGS)
 
-main.o: main.c
-	$(CC) $(CFLAGS) main.c -g -o main.o
+main.o: main.cu
+	$(CC) $(CFLAGS) main.cu -g -o main.o
 
-GameLogic.o: GameLogic.c
-	$(CC) $(CFLAGS) GameLogic.c -g -o GameLogic.o
+GameLogic.o: GameLogic.cu
+	$(CC) $(CFLAGS) GameLogic.cu -g -o GameLogic.o
 
 clean:
 	$(RM) -r *.o 
