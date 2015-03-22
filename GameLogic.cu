@@ -47,17 +47,13 @@ void processWithGPUOpt(){processorType = GPU_OPTIMIZED_PROCESSOR;}
 
 void step()
 {
-	switch(processorType)
+	if(processorType == CPU_PROCESSOR)
 	{
-		case CPU_PROCESSOR:
-			cpuImplementation();
-			break;
-		case GPU_BASIC_PROCESSOR:
-			naiveGPUImplementation();
-			break;
-		case GPU_OPTIMIZED_PROCESSOR:
-			naiveGPUImplementation();
-			break;
+		cpuImplementation();
+	}
+	else
+	{
+		GPUImplementation();
 	}
 }
 
@@ -93,6 +89,40 @@ void cpuImplementation()
 }
 
 __host__ __device__ uint8_t surrondingCellCount(uint8_t *cellsLocal, int64_t xCell, int64_t yCell, int64_t x, int64_t y)
+{
+    //Parse left -> right, top -> bottom
+    uint8_t cellCount = 0;
+    xCell= xCellMinus(1,xCell, x);
+    yCell = yCellMinus(1,yCell, y);
+    uint8_t searchIndex = 0;
+    while(searchIndex < 9)
+    {
+        if(searchIndex == 4)
+        {
+        	xCell = xCellPlus(1,xCell, x);
+            ++searchIndex;
+            continue;
+        }
+        if(searchIndex == 3 || searchIndex == 6)
+        {
+        	xCell =xCellMinus(3,xCell, x);
+        	yCell = yCellPlus(1,yCell, y);
+        }
+        //find cell
+        int64_t cell = xCell + (y * yCell);
+        if(cellsLocal[cell])
+        {
+            cellCount++;
+        }
+
+        xCell = xCellPlus(1,xCell, x);
+        ++searchIndex;
+    }
+
+    return cellCount;
+}
+
+__device__ uint8_t surrondingCellCountOptimized(uint8_t *cellsLocal, int64_t xCell, int64_t yCell, int64_t x, int64_t y)
 {
     //Parse left -> right, top -> bottom
     uint8_t cellCount = 0;
@@ -212,7 +242,7 @@ void cudaSetup()
 
 }
 
-void naiveGPUImplementation()
+void GPUImplementation()
 {
 	//Copy data to GPU
 	int64_t totalBlockCount = x*y;
@@ -220,7 +250,15 @@ void naiveGPUImplementation()
     cudaMemcpy(d_data_in_x, &x, sizeof(int64_t), cudaMemcpyHostToDevice);
     cudaMemcpy(d_data_in_y, &y, sizeof(int64_t), cudaMemcpyHostToDevice);
     //Executing GPU calculation
-    gpuGameOfLifeNaive<<<gridSize, blockSize>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
+    if(processorType == GPU_BASIC_PROCESSOR)
+    {
+    	gpuGameOfLifeNaive<<<gridSize, blockSize>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
+    }
+    else
+    {
+//    	gpuGameOfLifeOptimized<<<gridSize, blockSize, (d_data_in_x * d_data_in_y)>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
+    	gpuGameOfLifeOptimized<<<gridSize, blockSize>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
+    }
     cudaThreadSynchronize();
     //Complete GPU calculation
     //Reading GPU data out
@@ -230,16 +268,53 @@ void naiveGPUImplementation()
 	outputCell = switcher;
 }
 
+__global__ void gpuGameOfLifeOptimized(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
+{
+//	extern __shared__ uint8_t sData[];
+	uint64_t arrayIndex = threadIdx.x + (blockIdx.x * blockDim.x);
+	uint64_t x = *dataX, y = *dataY;
+	uint64_t totalBlockCount = x*y;
+//	if(threadIdx.x == 0)
+//	{
+//		uint64_t inIndex = 0;
+//		while(inIndex++ < totalBlockCount)
+//		{
+//			sData[inIndex] = cellsLocal[inIndex];
+//		}
+//	}
+//	syncthreads();
+
+	if(arrayIndex <= totalBlockCount)
+	{
+		uint64_t yId = arrayIndex/y;
+		uint64_t xId = arrayIndex - (yId*y);
+		outputCellLocal[xId+(yId*y)] = 0;
+		uint8_t localCellCount =  surrondingCellCountOptimized(cellsLocal, xId, yId, x, y);
+		switch(localCellCount)
+		{
+			case 2:
+				if(cellsLocal[xId+(yId*y)])
+				{
+					outputCellLocal[xId+(yId*y)] = 1;
+				}
+				break;
+			case 3:
+				outputCellLocal[xId+(yId*y)] = 1;
+				break;
+		}
+	}
+}
+
 __global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
 {
-	uint64_t x = *dataX, y = *dataY;
-	uint64_t yId =0, xId = 0;
+
 	uint64_t tId = threadIdx.x + (blockIdx.x * blockDim.x);
+	uint64_t x = *dataX, y = *dataY;
 	uint64_t totalBlockCount = x*y;
 	if(tId <= totalBlockCount)
 	{
-		yId = tId/y;
-		xId = tId - (yId*y);
+		uint64_t yId = tId/y;
+		uint64_t xId = tId - (yId*y);
 		outputCellLocal[xId+(yId*y)] = 0;
 		uint8_t localCellCount =  surrondingCellCount(cellsLocal, xId, yId, x, y);
 		switch(localCellCount)

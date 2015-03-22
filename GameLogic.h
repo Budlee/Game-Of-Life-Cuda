@@ -16,10 +16,6 @@
 #define GPU_BASIC_PROCESSOR 1
 #define GPU_OPTIMIZED_PROCESSOR 2
 
-#ifdef	__cplusplus
-extern "C" {
-#    endif
-
     void GameLogic(int64_t, int64_t);
     void desructor_GameLogic();
     uint8_t* getGameOfLifeState();
@@ -32,10 +28,12 @@ extern "C" {
     void processWithGPUBasic();
     void processWithGPUOpt();
     void cudaSetup();
-    void naiveGPUImplementation();
+    void GPUImplementation();
 
     __global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCell);
+    __global__ void gpuGameOfLifeOptimized(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCell);
     __host__ __device__ uint8_t surrondingCellCount(uint8_t *cells, int64_t xCell, int64_t yCell, int64_t x, int64_t y);
+    __device__ uint8_t surrondingCellCountOptimized(uint8_t *cells, int64_t xCell, int64_t yCell, int64_t x, int64_t y);
     __host__ __device__    int64_t xCellPlus(uint8_t add, int64_t value, int64_t x);
     __host__ __device__    int64_t xCellMinus(uint8_t minus, int64_t value, int64_t x);
     __host__ __device__    int64_t yCellPlus(uint8_t add, int64_t value, int64_t y);
@@ -49,11 +47,6 @@ extern "C" {
 
     static uint32_t blockSize, gridSize;
     static uint8_t cellSwitch;
-
-
-#    ifdef	__cplusplus
-}
-#endif
 
 #endif	/* GAMELOGIC_H */
 

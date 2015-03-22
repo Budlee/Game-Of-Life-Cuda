@@ -18,18 +18,19 @@
 
 #include "GameLogic.h"
 
-#define Y_AXIS 100  //Y_AXIS%4 should be equal 3 for 9 pixels in cell (3 rows of pixels)
-#define X_AXIS 100 //X_AXIS%4 should be equal 3 for 9 pixels in cell (3 columns of pixels)
+#define Y_AXIS 1000  //Y_AXIS%4 should be equal 3 for 9 pixels in cell (3 rows of pixels)
+#define X_AXIS 1000 //X_AXIS%4 should be equal 3 for 9 pixels in cell (3 columns of pixels)
 #define BLOCK_SIZE 4.0
 #define INTERVAL (1000 / 60)
 
-float posX = 0.01, posY = -0.1, posZ = 0;
+float posX = 0.01, posY = -0.1, scale = 1.0;
 
 void drawLines (void) {
     glClear(GL_COLOR_BUFFER_BIT);
     glLoadIdentity();
-    glTranslatef(posX,posY,posZ);
-    uint64_t yIndex = Y_AXIS;
+    glTranslatef(posX,posY,0.0);
+    glScalef(scale, scale, 1.0);
+    uint64_t yIndex = Y_AXIS-1;
     uint64_t xIndex = 0;
     uint8_t *cellsLocal = getGameOfLifeState();
     while (yIndex != 0)
@@ -72,27 +73,27 @@ void update(int value) {
    glutPostRedisplay();
 }
 
-void idleUpdate()
-{
-   step();
-   glutPostRedisplay();
-}
-
 void keyboardPress(unsigned char key, int x, int y)
 {
 	switch(key)
 	{
 		case 'a':
-			++posX;
+			posX+=5;
 			break;
 		case 'd':
-			--posX;
+			posX-=5;
 			break;
 		case 'w':
-			--posY;
+			posY-=5;
 			break;
 		case 's':
-			++posY;
+			posY+=5;
+			break;
+		case 'q':
+			++scale;
+			break;
+		case 'e':
+			--scale;
 			break;
 		case 'z':
 			printf("\nCPU processing\n");
@@ -112,15 +113,16 @@ void keyboardPress(unsigned char key, int x, int y)
 int main(int argc, char** argv)
 {
     glutInit (&argc,argv);
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-    glutInitWindowPosition(200, 0);
+    glutInitDisplayMode(GLUT_DOUBLE| GLUT_RGB);
+    glutInitWindowPosition(200, 100);
     glutInitWindowSize(800, 600);
-    glutCreateWindow("-----The Game of Life Idle-----");
+    glutCreateWindow("-----The Game of Life-----");
 
-    glViewport(0, 0, X_AXIS, Y_AXIS);
+    glViewport(0, 0, 800, 600);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0.0, X_AXIS, 0.0, Y_AXIS,0.0f, 1.0f);
+    glOrtho(0.0, X_AXIS, 0.0, Y_AXIS,-1000.0f, 1000.0f);
+    //gluOrtho2D(0.0, 800, 0.0, 600);
     glMatrixMode (GL_MODELVIEW);
     glColor3f(1.0,1.0,1.0);
 

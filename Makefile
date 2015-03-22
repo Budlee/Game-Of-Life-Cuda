@@ -10,10 +10,10 @@ GameOfLife: main.o GameLogic.o
 	$(CC) -o $(PROJECTNAME) main.o GameLogic.o $(LDFLAGS)
 
 main.o: main.cu
-	$(CC) $(CFLAGS) main.cu -g -o main.o
+	$(CC) $(CFLAGS) main.cu -o main.o
 
 GameLogic.o: GameLogic.cu
-	$(CC) $(CFLAGS) GameLogic.cu -g -o GameLogic.o
+	$(CC) $(CFLAGS) GameLogic.cu -o GameLogic.o
 
 clean:
 	$(RM) -r *.o 
