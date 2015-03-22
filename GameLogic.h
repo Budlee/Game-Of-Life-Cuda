@@ -12,6 +12,10 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#define CPU_PROCESSOR 0
+#define GPU_BASIC_PROCESSOR 1
+#define GPU_OPTIMIZED_PROCESSOR 2
+
 #ifdef	__cplusplus
 extern "C" {
 #    endif
@@ -23,6 +27,10 @@ extern "C" {
 
     void cpuImplementation();
 
+    static uint8_t processorType;
+    void processWithCPU();
+    void processWithGPUBasic();
+    void processWithGPUOpt();
     void cudaSetup();
     void naiveGPUImplementation();
 

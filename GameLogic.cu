@@ -3,6 +3,7 @@
 
 void GameLogic(int64_t xIn, int64_t yIn)
 {
+	processorType = CPU_PROCESSOR;
     x = xIn;
     y = yIn;
     cellSwitch = 0;
@@ -40,10 +41,24 @@ uint8_t* getGameOfLifeState()
     return cells;
 }
 
+void processWithCPU(){processorType = CPU_PROCESSOR;}
+void processWithGPUBasic(){processorType = GPU_BASIC_PROCESSOR;}
+void processWithGPUOpt(){processorType = GPU_OPTIMIZED_PROCESSOR;}
+
 void step()
 {
-   cpuImplementation();
-   //naiveGPUImplementation();
+	switch(processorType)
+	{
+		case CPU_PROCESSOR:
+			cpuImplementation();
+			break;
+		case GPU_BASIC_PROCESSOR:
+			naiveGPUImplementation();
+			break;
+		case GPU_OPTIMIZED_PROCESSOR:
+			naiveGPUImplementation();
+			break;
+	}
 }
 
 void cpuImplementation()
@@ -247,3 +262,70 @@ __global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t*
 		}
 	}
 }
+
+//Improved Naieve
+//__global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
+//{
+//	int64_t x = *dataX, y = *dataY;
+//	int64_t xId = 0;
+//	int64_t yIndex = threadIdx.x + (blockIdx.x * blockDim.x);
+//	int64_t totalBlockCount = x*y;
+//	if(yIndex <= totalBlockCount)
+//	{
+//		xId = 0;
+//		while(xId < x)
+//		{
+//			outputCellLocal[xId+(yIndex*y)] = 0;
+//			uint8_t localCellCount =  surrondingCellCount(cellsLocal, xId, yIndex, x, y);
+//			switch(localCellCount)
+//			{
+//				case 2:
+//					if(cellsLocal[xId+(yIndex*y)])
+//					{
+//						outputCellLocal[xId+(yIndex*y)] = 1;
+//					}
+//					break;
+//				case 3:
+//					outputCellLocal[xId+(yIndex*y)] = 1;
+//					break;
+//			}
+//
+//			++xId;
+//		}
+//	}
+//}
+
+//Origonal
+//__global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
+//{
+//	int64_t x = *dataX, y = *dataY;
+//	int64_t yId =0, xId = 0;
+//	int64_t ysId = threadIdx.x + (blockIdx.x * blockDim.x);
+//	if(ysId == 1)
+//	{
+//	    while(yId < y)
+//	    {
+//	        xId = 0;
+//	        while(xId < x)
+//	        {
+//	        	outputCellLocal[xId+(yId*y)] = 0;
+//	            uint8_t localCellCount =  surrondingCellCount(cellsLocal, xId, yId, x, y);
+//				switch(localCellCount)
+//				{
+//					case 2:
+//						if(cellsLocal[xId+(yId*y)])
+//						{
+//							outputCellLocal[xId+(yId*y)] = 1;
+//						}
+//						break;
+//					case 3:
+//						outputCellLocal[xId+(yId*y)] = 1;
+//						break;
+//				}
+//
+//	            ++xId;
+//	        }
+//	        ++yId;
+//	    }
+//	}
+//}
