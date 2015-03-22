@@ -18,8 +18,8 @@
 
 #include "GameLogic.h"
 
-#define Y_AXIS 500  //Y_AXIS%4 should be equal 3 for 9 pixels in cell (3 rows of pixels)
-#define X_AXIS 500 //X_AXIS%4 should be equal 3 for 9 pixels in cell (3 columns of pixels)
+#define Y_AXIS 100  //Y_AXIS%4 should be equal 3 for 9 pixels in cell (3 rows of pixels)
+#define X_AXIS 100 //X_AXIS%4 should be equal 3 for 9 pixels in cell (3 columns of pixels)
 #define BLOCK_SIZE 4.0
 #define INTERVAL (1000 / 60)
 

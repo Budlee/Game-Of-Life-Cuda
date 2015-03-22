@@ -232,20 +232,14 @@ void naiveGPUImplementation()
 
 __global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
 {
-	int64_t x = *dataX, y = *dataY;
-	int64_t yId =0, xId = 0;
-	int64_t tId = threadIdx.x + (blockIdx.x * blockDim.x);
-	int64_t totalBlockCount = x*y;
+	uint64_t x = *dataX, y = *dataY;
+	uint64_t yId =0, xId = 0;
+	uint64_t tId = threadIdx.x + (blockIdx.x * blockDim.x);
+	uint64_t totalBlockCount = x*y;
 	if(tId <= totalBlockCount)
 	{
-		int64_t tempYIndex = tId;
-
-		while(tempYIndex >= x)
-		{
-			yId++;
-			tempYIndex -= x;
-		}
-		xId = tempYIndex;
+		yId = tId/y;
+		xId = tId - (yId*y);
 		outputCellLocal[xId+(yId*y)] = 0;
 		uint8_t localCellCount =  surrondingCellCount(cellsLocal, xId, yId, x, y);
 		switch(localCellCount)
