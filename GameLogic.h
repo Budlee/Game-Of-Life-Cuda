@@ -33,7 +33,7 @@
     __global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCell);
     __global__ void gpuGameOfLifeOptimized(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCell);
     __host__ __device__ uint8_t surrondingCellCount(uint8_t *cells, int64_t xCell, int64_t yCell, int64_t x, int64_t y);
-    __device__ uint8_t surrondingCellCountOptimized(uint8_t *cells, int64_t xCell, int64_t yCell, int64_t x, int64_t y);
+    __device__ uint8_t surrondingCellCountOptimized(uint8_t *cellsLocal, int64_t xCell, int64_t x, int64_t y);
     __host__ __device__    int64_t xCellPlus(uint8_t add, int64_t value, int64_t x);
     __host__ __device__    int64_t xCellMinus(uint8_t minus, int64_t value, int64_t x);
     __host__ __device__    int64_t yCellPlus(uint8_t add, int64_t value, int64_t y);
@@ -45,6 +45,7 @@
     static uint8_t *d_data_in, *d_data_out;
     static int64_t *d_data_in_x, *d_data_in_y;
 
+    static uint32_t optGridSize, optBlockSize;
     static uint32_t blockSize, gridSize;
     static uint8_t cellSwitch;
 

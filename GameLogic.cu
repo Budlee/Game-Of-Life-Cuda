@@ -122,38 +122,44 @@ __host__ __device__ uint8_t surrondingCellCount(uint8_t *cellsLocal, int64_t xCe
     return cellCount;
 }
 
-__device__ uint8_t surrondingCellCountOptimized(uint8_t *cellsLocal, int64_t xCell, int64_t yCell, int64_t x, int64_t y)
+__device__ uint8_t surrondingCellCountOptimized(uint8_t *cellsLocal, int64_t xCell, int64_t x, int64_t y)
 {
-    //Parse left -> right, top -> bottom
-    uint8_t cellCount = 0;
-    xCell= xCellMinus(1,xCell, x);
-    yCell = yCellMinus(1,yCell, y);
-    uint8_t searchIndex = 0;
-    while(searchIndex < 9)
-    {
-        if(searchIndex == 4)
-        {
-        	xCell = xCellPlus(1,xCell, x);
-            ++searchIndex;
-            continue;
-        }
-        if(searchIndex == 3 || searchIndex == 6)
-        {
-        	xCell =xCellMinus(3,xCell, x);
-        	yCell = yCellPlus(1,yCell, y);
-        }
-        //find cell
-        int64_t cell = xCell + (y * yCell);
-        if(cellsLocal[cell])
-        {
-            cellCount++;
-        }
+	//Parse left -> right, top -> bottom
+	    uint8_t cellCount = 0;
+	    int64_t yCell = 1;
+	    xCell= xCellMinus(1,xCell, x);
+	    yCell = yCellMinus(1,yCell, y);
+	    uint8_t searchIndex = 0;
+	    while(searchIndex < 9)
+	    {
+	        if(searchIndex == 4)
+	        {
+	        	xCell = xCellPlus(1,xCell, x);
+	            ++searchIndex;
+	            continue;
+	        }
+	        if(searchIndex == 3 || searchIndex == 6)
+	        {
+	        	xCell =xCellMinus(3,xCell, x);
+	        	yCell = yCellPlus(1,yCell, y);
+	        }
+	        //find cell
+	        int64_t cell = xCell + (y * yCell);
+	        if(cellsLocal[cell])
+	        {
+	            cellCount++;
+	        }
+	        if(cellCount > 3)
+	        {
+	        	return cellCount;
+	        }
 
-        xCell = xCellPlus(1,xCell, x);
-        ++searchIndex;
-    }
+	        xCell = xCellPlus(1,xCell, x);
+	        ++searchIndex;
+	    }
 
-    return cellCount;
+	    return cellCount;
+
 }
 
 __host__ __device__ int64_t xCellPlus(uint8_t add, int64_t value, int64_t x)
@@ -230,6 +236,13 @@ void cudaSetup()
     int64_t totalBlockCount = x*y;
 	blockSize = 1024;
 	gridSize = ((totalBlockCount + (blockSize-1))/blockSize);
+	optBlockSize = x;
+	optGridSize =(((x*y) + (optBlockSize-1))/optBlockSize);
+	if((x >= 1024) || (y >= 1024))
+	{
+		printf("\n\nUnable to use optimized GPU version with x & y larger than 1023\n\n");
+	}
+
     int devID;
     cudaDeviceProp props;
     cudaGetDevice(&devID);
@@ -250,14 +263,13 @@ void GPUImplementation()
     cudaMemcpy(d_data_in_x, &x, sizeof(int64_t), cudaMemcpyHostToDevice);
     cudaMemcpy(d_data_in_y, &y, sizeof(int64_t), cudaMemcpyHostToDevice);
     //Executing GPU calculation
-    if(processorType == GPU_BASIC_PROCESSOR)
+    if(processorType == GPU_OPTIMIZED_PROCESSOR && (x < 1024) && (y < 1024))
     {
-    	gpuGameOfLifeNaive<<<gridSize, blockSize>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
+		gpuGameOfLifeOptimized<<<optGridSize, optBlockSize, sizeof(uint8_t)*(x * 3)>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
     }
     else
     {
-//    	gpuGameOfLifeOptimized<<<gridSize, blockSize, (d_data_in_x * d_data_in_y)>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
-    	gpuGameOfLifeOptimized<<<gridSize, blockSize>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
+    	gpuGameOfLifeNaive<<<gridSize, blockSize>>>(d_data_in, d_data_in_x, d_data_in_y, d_data_out);
     }
     cudaThreadSynchronize();
     //Complete GPU calculation
@@ -267,41 +279,59 @@ void GPUImplementation()
 	cells = outputCell;
 	outputCell = switcher;
 }
-
-__global__ void gpuGameOfLifeOptimized(uint8_t* cellsLocal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
+/**
+ * This optimization does not work... Also this has to be for grid sizes less than 1024 x and y access
+ * 					The naieve call count is
+ * 					read global memory calls: 		9
+ * 					write global memory calls: 		2
+ * 					read shared memory calls:		0
+ * 					write shared memory calls:		0
+ *
+ * 					The optimized call count is
+ * 					read global memory calls: 		3
+ * 					write global memory calls: 		1
+ * 					read shared memory calls:		12
+ * 					write shared memory calls:		3
+ *
+ */
+__global__ void gpuGameOfLifeOptimized(uint8_t* cellsGlobal, int64_t* dataX, int64_t* dataY, uint8_t *outputCellLocal)
 {
-//	extern __shared__ uint8_t sData[];
-	uint64_t arrayIndex = threadIdx.x + (blockIdx.x * blockDim.x);
+	extern __shared__ uint8_t sData[];
+	uint64_t tId = threadIdx.x + (blockIdx.x * blockDim.x);
 	uint64_t x = *dataX, y = *dataY;
 	uint64_t totalBlockCount = x*y;
-//	if(threadIdx.x == 0)
-//	{
-//		uint64_t inIndex = 0;
-//		while(inIndex++ < totalBlockCount)
-//		{
-//			sData[inIndex] = cellsLocal[inIndex];
-//		}
-//	}
-//	syncthreads();
-
-	if(arrayIndex <= totalBlockCount)
+	uint64_t yId = tId/y;
+	uint64_t xId = tId - (yId*x);
+	//Pass data to shared
+	if(tId <= totalBlockCount)
 	{
-		uint64_t yId = arrayIndex/y;
-		uint64_t xId = arrayIndex - (yId*y);
-		outputCellLocal[xId+(yId*y)] = 0;
-		uint8_t localCellCount =  surrondingCellCountOptimized(cellsLocal, xId, yId, x, y);
+		uint8_t rowIndex = 0;
+		uint64_t yVal = yCellMinus(1,yId,y);
+		while (rowIndex < 3)
+		{
+			sData[(rowIndex * x) + xId] =cellsGlobal[((yVal*x)) + xId];
+			yVal = yCellPlus(1,yVal, y);
+			++rowIndex;
+		}
+	}
+	syncthreads();
+	if(tId <= totalBlockCount)
+	{
+		uint8_t localCellCount =  surrondingCellCountOptimized(sData, xId, x, y);
+		uint64_t result = 0;
 		switch(localCellCount)
 		{
 			case 2:
-				if(cellsLocal[xId+(yId*y)])
+				if(sData[x + xId])
 				{
-					outputCellLocal[xId+(yId*y)] = 1;
+					result = 1;
 				}
 				break;
 			case 3:
-				outputCellLocal[xId+(yId*y)] = 1;
+				result = 1;
 				break;
 		}
+		outputCellLocal[xId+(yId*x)] = result;
 	}
 }
 
@@ -314,19 +344,19 @@ __global__ void gpuGameOfLifeNaive(uint8_t* cellsLocal, int64_t* dataX, int64_t*
 	if(tId <= totalBlockCount)
 	{
 		uint64_t yId = tId/y;
-		uint64_t xId = tId - (yId*y);
-		outputCellLocal[xId+(yId*y)] = 0;
+		uint64_t xId = tId - (yId*x);
+		outputCellLocal[xId+(yId*x)] = 0;
 		uint8_t localCellCount =  surrondingCellCount(cellsLocal, xId, yId, x, y);
 		switch(localCellCount)
 		{
 			case 2:
-				if(cellsLocal[xId+(yId*y)])
+				if(cellsLocal[xId+(yId*x)])
 				{
-					outputCellLocal[xId+(yId*y)] = 1;
+					outputCellLocal[xId+(yId*x)] = 1;
 				}
 				break;
 			case 3:
-				outputCellLocal[xId+(yId*y)] = 1;
+				outputCellLocal[xId+(yId*x)] = 1;
 				break;
 		}
 	}
