@@ -10,6 +10,7 @@ void GameLogic(int64_t xIn, int64_t yIn)
     int64_t totalBlockCount = x*y;
     cells = (uint8_t*)malloc(sizeof (uint8_t)*(totalBlockCount));
     outputCell = (uint8_t*)malloc(sizeof (uint8_t)*(totalBlockCount));
+    srand(time(NULL));
     while(totalBlockCount-- != 0)
     {
         if(rand()%2)
