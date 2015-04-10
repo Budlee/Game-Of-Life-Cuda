@@ -1,7 +1,7 @@
 RM=rm
 CC=nvcc
 CFLAGS=-c
-LDFLAGS=-lGL -lGLU -lglut -lGLEW
+LDFLAGS=-lGL -lGLU -lglut 
 PROJECTNAME=GameOfLife
 
 all: $(PROJECTNAME)

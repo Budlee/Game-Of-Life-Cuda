@@ -10,7 +10,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include <GL/glew.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
 
