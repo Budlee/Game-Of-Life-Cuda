@@ -18,15 +18,14 @@
 
 #include "GameLogic.h"
 
-
-#define BLOCK_SIZE 4.0
+#define MOVE_DISTANCE 5
 #define INTERVAL (1000 / 60)
 
 // Works best as a square grid
-uint32_t Y_AXIS = 800;
+uint32_t Y_AXIS = 200;
 uint32_t X_AXIS = Y_AXIS;
 
-uint8_t timmingVisible = 0;
+uint8_t timmingVisible = 1;
 float posX = 0.01, posY = -0.1, scale = 1.0;
 
 void drawLines (void) {
@@ -34,15 +33,16 @@ void drawLines (void) {
     glLoadIdentity();
     glTranslatef(posX,posY,0.0);
     glScalef(scale, scale, 1.0);
-    uint64_t yIndex = Y_AXIS-1;
+    uint64_t yIndex = Y_AXIS;
     uint64_t xIndex = 0;
     uint8_t *cellsLocal = getGameOfLifeState();
     while (yIndex != 0)
     {
+    	uint64_t localYIndex = yIndex -1;
         xIndex = 0;
         while (xIndex < X_AXIS)
         {
-            if (cellsLocal[(yIndex * X_AXIS) + xIndex] != 0)
+            if (cellsLocal[(localYIndex * X_AXIS) + xIndex] != 0)
             {
                 glColor3f(0.0, 1.0, 0.0);
             }
@@ -50,9 +50,10 @@ void drawLines (void) {
             {
                 glColor3f(1.0, 1.0, 1.0);
             }
-            glRecti(xIndex, yIndex, xIndex+BLOCK_SIZE, yIndex+BLOCK_SIZE);
+            glRecti(xIndex, localYIndex, xIndex+1, localYIndex+1);
             ++xIndex;
         }
+
         --yIndex;
     }
     glutSwapBuffers();
@@ -89,22 +90,22 @@ void keyboardPress(unsigned char key, int x, int y)
 	switch(key)
 	{
 		case 'a':
-			posX+=5;
+			posX+=MOVE_DISTANCE;
 			break;
 		case 'd':
-			posX-=5;
+			posX-=MOVE_DISTANCE;
 			break;
 		case 'w':
-			posY-=5;
+			posY-=MOVE_DISTANCE;
 			break;
 		case 's':
-			posY+=5;
+			posY+=MOVE_DISTANCE;
 			break;
 		case 'q':
-			++scale;
+			--scale;
 			break;
 		case 'e':
-			--scale;
+			++scale;
 			break;
 		case 'z':
 			printf("\nCPU processing\n");
@@ -115,8 +116,15 @@ void keyboardPress(unsigned char key, int x, int y)
 			processWithGPUBasic();
 			break;
 		case 'c':
-			printf("\nGPU Optimized processing\n");
-			processWithGPUOpt();
+			if(X_AXIS < 1024 && Y_AXIS < 1024)
+			{
+				printf("\nGPU Optimized processing\n");
+				processWithGPUOpt();
+			}
+			else
+			{
+				printf("\nGPU Optimized unable to run. Cell count is too large\n");
+			}
 			break;
 		case 't':
 			timmingVisible ^=0x1;
@@ -143,8 +151,8 @@ void printCommands()
 	printf("a\t move screen left\n");
 	printf("d\t move screen right\n");
 	printf("\n");
-	printf("q\t zoom in\n");
-	printf("e\t zoom out\n");
+	printf("q\t zoom out\n");
+	printf("e\t zoom in\n");
 	printf("\n");
 	printf("z\t cpu implementation\n");
 	printf("x\t gpu naïve implementation\n");
@@ -170,7 +178,7 @@ uint8_t getUserInput(int argc, char* argv[])
 		printf("\n\nInvalid input count");
 		return 1;
 	}
-	uint32_t val = 800;
+	uint32_t val = Y_AXIS;
 	if(argv[1][0] != '-')
 	{
 		return 1;
@@ -183,8 +191,7 @@ uint8_t getUserInput(int argc, char* argv[])
 		return 1;
 	}
 
-	//This is as each cell is 4 pixles
-	Y_AXIS = (val*BLOCK_SIZE);
+	Y_AXIS = val;
 	X_AXIS = Y_AXIS;
 
 
@@ -201,11 +208,10 @@ int main(int argc, char* argv[])
 	}
     glutInit (&argc,argv);
     glutInitDisplayMode(GLUT_DOUBLE| GLUT_RGB);
-    glutInitWindowPosition(200, 100);
-    glutInitWindowSize(800, 600);
+    glutInitWindowPosition(200, 200);
+    glutInitWindowSize(800, 800);
     glutCreateWindow("-----The Game of Life-----");
 
-    glViewport(0, 0, 800, 800);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(0.0, X_AXIS, 0.0, Y_AXIS,-1000.0f, 1000.0f);
