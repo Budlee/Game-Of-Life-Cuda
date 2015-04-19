@@ -1,0 +1,6 @@
+To build the project
+Type the following:
+make
+
+To run the project type the following:
+./GameOfLife 
